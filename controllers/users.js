@@ -47,6 +47,27 @@ const createUser = (req, res, next) => {
     .catch(next);
 };
 
+const updateProfile = (req, res, next) => {
+  User.findByIdAndUpdate(
+    req.user._id,
+    {
+      name: req.body.name,
+      email: req.body.email,
+    },
+    {
+      new: true, // обработчик then получит на вход обновлённую запись
+      runValidators: true, // данные будут валидированы перед изменением
+    },
+  )
+    .then((user) => {
+      if (!user) {
+        throw new NotFoundError('Произошла ошибка, не удалось найти пользователей');
+      }
+      res.status(200).send({ data: user });
+    })
+    .catch((err) => next(err));
+};
+
 const login = (req, res, next) => {
   const { email, password } = req.body;
 
@@ -68,5 +89,5 @@ const login = (req, res, next) => {
 };
 
 module.exports = {
-  createUser, login, getCurrentUser,
+  createUser, login, getCurrentUser, updateProfile,
 };
