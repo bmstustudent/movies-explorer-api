@@ -1,6 +1,6 @@
+/* eslint-disable indent */
 const { celebrate, Joi } = require('celebrate');
 const { ObjectId } = require('mongoose').Types;
-const validator = require('validator');
 const {
   REQUIRED_MESSAGE,
   VALIDATION_MESSAGE,
@@ -23,16 +23,17 @@ const validateObjId = celebrate({
 
 const validateMovieBody = celebrate({
   body: Joi.object().keys({
-    image: Joi.string().required().custom((value, helpers) => {
-      if (validator.isURL(value)) {
-        return value;
-      }
-      return helpers.message(VALIDATION_MESSAGE('image', 'url'));
-    })
-      .messages({
-        'any.required': REQUIRED_MESSAGE('image'),
-        'string.empty': EMPTY_FIELD_MESSAGE('image'),
-      }),
+    country: Joi.string().required(),
+    director: Joi.string().required(),
+    duration: Joi.number().required(),
+    year: Joi.string().required(),
+    description: Joi.string().required(),
+    image: Joi.string().required().pattern(new RegExp(/^(https?:\/\/)([\da-z.-]{1,})(\.)([a-z]{2,6})(\/?)([\da-z-.\W]*)/)).required(),
+    trailer: Joi.string().required().pattern(new RegExp(/^(https?:\/\/)([\da-z.-]{1,})(\.)([a-z]{2,6})(\/?)([\da-z-.\W]*)/)).required(),
+    thumbnail: Joi.string().required().pattern(new RegExp(/^(https?:\/\/)([\da-z.-]{1,})(\.)([a-z]{2,6})(\/?)([\da-z-.\W]*)/)).required(),
+    movieId: Joi.number().required(),
+    nameRU: Joi.string().required(),
+    nameEN: Joi.string().required(),
   }),
 });
 
