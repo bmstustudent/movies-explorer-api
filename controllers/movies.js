@@ -60,7 +60,6 @@ const createMovie = (req, res, next) => {
     .catch((err) => next(err));
 };
 
-
 const deleteMovie = (req, res, next) => {
   Movie.findById(req.params.movieId)
     .then((movie) => {
