@@ -14,7 +14,21 @@ const { limiter } = require('./utils/rate-limiter');
 const app = express();
 const { PORT = 3000, MONGO_URL = devUrl } = process.env;
 
-app.use(limiter);
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(helmet());
+
+const mongooseConnectOptions = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  useFindAndModify: false,
+  useCreateIndex: true,
+};
+
+// подключаемся к серверу mongo
+mongoose.connect(MONGO_URL, mongooseConnectOptions);
+
 app.use(cors());
 
 const corsOptions = {
@@ -26,28 +40,24 @@ app.get('/products/:id', cors(corsOptions), (req, res) => {
   res.json({ msg: 'This is CORS-enabled for only example.com.' });
 });
 
+// подключаем логгер запросов
+app.use(requestLogger);
+
+// подключаем лимитер запросов
+app.use(limiter);
+
+// подключаем краш-тест сервера
 app.get('/crash-test', () => {
   setTimeout(() => {
     throw new Error('Сервер сейчас упадёт');
   }, 0);
 });
 
-const mongooseConnectOptions = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  useFindAndModify: false,
-  useCreateIndex: true,
-};
-
-mongoose.connect(MONGO_URL, mongooseConnectOptions);
-
-app.use(helmet());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(requestLogger);
 app.use(routes);
 app.use(errorLogger);
 app.use(errors());
+
+// здесь централизованно обрабатываем ошибки
 app.use(errorHandler);
 
 app.listen(PORT, () => {

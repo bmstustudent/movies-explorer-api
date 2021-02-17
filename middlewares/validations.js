@@ -11,7 +11,7 @@ const {
 
 const validateObjId = celebrate({
   params: Joi.object().keys({
-    articleId: Joi.string().required().hex().length(24)
+    movieId: Joi.string().required().hex().length(24)
       .custom((value, helpers) => {
         if (ObjectId.isValid(value)) {
           return value;
