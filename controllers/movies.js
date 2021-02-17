@@ -62,7 +62,7 @@ const createMovie = async (req, res, next) => {
 const deleteMovie = async (req, res, next) => {
   try {
     const currentUser = req.user.id;
-    const { moveiId } = req.params;
+    const { movieId } = req.params;
     const movieForConfirm = await Movie.findById(movieId).select('+owner');
     if (movieForConfirm === null) {
       throw new NotFoundError(INCORRECT_ID_MESSAGE('статьи'));
