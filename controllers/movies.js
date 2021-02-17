@@ -1,3 +1,4 @@
+/* eslint-disable indent */
 const Movie = require('../models/movie');
 const Forbidden = require('../errors/forbidden');
 const NotFoundError = require('../errors/not-found-err');

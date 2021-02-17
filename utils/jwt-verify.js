@@ -7,6 +7,7 @@ const jwtVerify = async (token) => {
   try {
     return await jwt.verify(token, NODE_ENV === 'production' ? JWT_SECRET : devJWT);
   } catch (err) {
+    // eslint-disable-next-line no-console
     return console.log(err);
   }
 };
