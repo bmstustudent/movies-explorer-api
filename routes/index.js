@@ -10,6 +10,6 @@ router.post('/signup', validateUserBody, createUser);
 router.post('/signin', validateAuthentication, login);
 router.use(auth);
 router.use('/users', userRouter);
-router.use('/articles', movieRouter);
+router.use('/movies', movieRouter);
 
 module.exports = router;
