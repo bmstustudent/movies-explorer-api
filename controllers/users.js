@@ -49,7 +49,7 @@ const createUser = (req, res, next) => {
 
 const updateProfile = (req, res, next) => {
   User.findByIdAndUpdate(
-    req.user._id,
+    req.user.id,
     {
       name: req.body.name,
       email: req.body.email,
