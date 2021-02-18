@@ -8,8 +8,10 @@ const { errors } = require('celebrate');
 const routes = require('./routes');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
 const errorHandler = require('./middlewares/error-handler');
+const NotFoundError = require('./errors/not-found-err');
 const { devUrl } = require('./utils/config');
 const { limiter } = require('./utils/rate-limiter');
+const { SERVER_ERROR_MESSAGE } = require('./utils/utils');
 
 const app = express();
 const { PORT = 3000, MONGO_URL = devUrl } = process.env;
@@ -40,11 +42,11 @@ app.get('/products/:id', cors(corsOptions), (req, res) => {
   res.json({ msg: 'This is CORS-enabled for only example.com.' });
 });
 
-// подключаем логгер запросов
-app.use(requestLogger);
-
 // подключаем лимитер запросов
 app.use(limiter);
+
+// подключаем логгер запросов
+app.use(requestLogger);
 
 // подключаем краш-тест сервера
 app.get('/crash-test', () => {
@@ -54,6 +56,12 @@ app.get('/crash-test', () => {
 });
 
 app.use(routes);
+
+// обработчики ошибок
+app.all('*', () => {
+  throw new NotFoundError(SERVER_ERROR_MESSAGE);
+});
+
 app.use(errorLogger);
 app.use(errors());
 
