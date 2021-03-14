@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const { errors } = require('celebrate');
+const cors = require('cors');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
 const router = require('./routes/index');
 const { pageNotFound, handleErrors } = require('./controllers/errors');
@@ -19,6 +20,17 @@ mongoose.connect(DATABASE_ADDRESS, {
   useCreateIndex: true,
   useFindAndModify: false,
   useUnifiedTopology: true,
+});
+
+app.use(cors());
+
+const corsOptions = {
+  origin: 'http://localhost:3000/',
+  optionsSuccessStatus: 200,
+};
+
+app.get('/products/:id', cors(corsOptions), (req, res) => {
+  res.json({ msg: 'This is CORS-enabled for only example.com.' });
 });
 
 app.use(bodyParser.json());
