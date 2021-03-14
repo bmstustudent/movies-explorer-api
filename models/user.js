@@ -1,50 +1,33 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const { isEmail } = require('validator');
-const AuthorizationError = require('../errors/auth-error');
+const validator = require('validator');
+const {
+  REQUIRED_MESSAGE,
+  VALIDATION_MESSAGE,
+  INCORRECT_LENGTH_MESSAGE,
+  REPEATED_EMAIL_ERROR_MESSAGE,
+} = require('../utils/utils');
 
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
-    minlength: 2,
-    maxlength: 30,
+    required: [true, REQUIRED_MESSAGE('name')],
+    minlength: [2, INCORRECT_LENGTH_MESSAGE('Минимальная', 'name', '2')],
+    maxlength: [30, INCORRECT_LENGTH_MESSAGE('Максимальная', 'name', '30')],
   },
   email: {
     type: String,
-    required: true,
-    unique: true,
+    required: [true, REQUIRED_MESSAGE('email')],
+    unique: [true, REPEATED_EMAIL_ERROR_MESSAGE],
     validate: {
-      validator(value) {
-        return isEmail(value);
-      },
-      message: 'Укажиже корректный e-mail',
+      validator: (v) => validator.isEmail(v),
+      message: VALIDATION_MESSAGE('email', 'email'),
     },
   },
-  hash: {
+  password: {
     type: String,
-    required: true,
+    required: [true, REQUIRED_MESSAGE('password')],
     select: false,
   },
-},
-{
-  versionKey: false,
 });
-
-userSchema.statics.findUserByCredentials = function findUserByCredentials(email, password) {
-  return this.findOne({ email }).select('+hash')
-    .then((user) => {
-      if (!user) {
-        throw new AuthorizationError('Неправильные почта или пароль');
-      }
-      return bcrypt.compare(password, user.hash)
-        .then((matched) => {
-          if (!matched) {
-            throw new AuthorizationError('Неправильные почта или пароль');
-          }
-          return user;
-        });
-    });
-};
 
 module.exports = mongoose.model('user', userSchema);
