@@ -1,86 +1,73 @@
-/* eslint-disable indent */
-const Movie = require('../models/movie');
-const Forbidden = require('../errors/forbidden');
-const NotFoundError = require('../errors/not-found-err');
+const ModelMovie = require('../models/movie');
+const { BadRequestError } = require('../errors/bad-request');
+const { NotFoundError } = require('../errors/not-found');
+const { ForbiddenError } = require('../errors/forbidden');
+const { ConflictError } = require('../errors/conflict');
 const {
-  BAD_REQUEST_ERROR_CODE,
-  FORBIDDEN_MESSAGE,
-  INCORRECT_ID_MESSAGE,
-  CAST_ERROR,
-  VALIDATION_ERROR,
-} = require('../utils/utils');
+  INCORRECT_ERROR_MESSAGE, NOTFOUND_ID_MESSAGE,
+  MOVIE_OWNER_ERROR_MESSAGE, MOVIE_CONFLICT_ERROR_MESSAGE,
+} = require('../config');
 
-const getMovies = async (req, res, next) => {
-  try {
-    const owner = req.user.id;
-    const movies = await Movie.find({ owner });
-    res.send(movies);
-  } catch (err) {
-    if (err.name === CAST_ERROR) {
-      err.statusCode = BAD_REQUEST_ERROR_CODE;
-    }
-    next(err);
-  }
+const getMovies = (req, res, next) => {
+  ModelMovie.find({ owner: req.user._id })
+    .then((movies) => {
+      res.send(movies);
+    })
+    .catch(next);
 };
 
-const createMovie = async (req, res, next) => {
-  try {
-    const {
-      country,
-      director,
-      duration,
-      year,
-      description,
-      image,
-      trailer,
-      movieId,
-      nameRU,
-      nameEN,
-      thumbnail,
-    } = req.body;
-    const newMovie = await Movie.create({
-      country,
-      director,
-      duration,
-      year,
-      description,
-      image,
-      trailer,
-      movieId,
-      nameRU,
-      nameEN,
-      thumbnail,
-      owner: req.user.id,
-    });
-    res.send(newMovie);
-  } catch (err) {
-    if (err.name === CAST_ERROR || err.name === VALIDATION_ERROR) {
-      err.statusCode = BAD_REQUEST_ERROR_CODE;
-    }
-    next(err);
-  }
+const addMovieFavorite = (req, res, next) => {
+  const {
+    country, director, duration, year,
+    description, image, trailer, nameRU,
+    nameEN, thumbnail, movieId,
+  } = req.body;
+  return ModelMovie.findOne({ movieId, owner: req.user._id })
+    .then((movieFavorite) => {
+      if (movieFavorite) {
+        throw new ConflictError(MOVIE_CONFLICT_ERROR_MESSAGE);
+      }
+      return ModelMovie.create({
+        country,
+        director,
+        duration,
+        year,
+        description,
+        image,
+        trailer,
+        nameRU,
+        nameEN,
+        thumbnail,
+        movieId,
+        owner: req.user._id,
+      });
+    })
+    .then((movie) => {
+      res.send(movie);
+    })
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        throw new BadRequestError(INCORRECT_ERROR_MESSAGE);
+      }
+      throw err;
+    })
+    .catch(next);
 };
 
-const deleteMovie = async (req, res, next) => {
-  try {
-    const currentUser = req.user.id;
-    const { movieId } = req.params;
-    const movieForConfirm = await Movie.findById(movieId).select('+owner');
-    if (movieForConfirm === null) {
-      throw new NotFoundError(INCORRECT_ID_MESSAGE('фильма'));
-    } else if (currentUser !== movieForConfirm.owner.toString()) {
-      throw new Forbidden(FORBIDDEN_MESSAGE);
-    }
-    const confirmedMovie = await Movie.findByIdAndRemove(movieId);
-    res.send(confirmedMovie);
-  } catch (err) {
-    if (err.name === CAST_ERROR) {
-      err.statusCode = BAD_REQUEST_ERROR_CODE;
-    }
-    next(err);
-  }
+const deleteMovieFavorite = (req, res, next) => {
+  const { movieId } = req.params;
+  ModelMovie.findById(movieId).select('+owner')
+    .orFail(() => new NotFoundError(NOTFOUND_ID_MESSAGE))
+    .then((movie) => {
+      if (JSON.stringify(req.user._id) !== JSON.stringify(movie.owner)) {
+        throw new ForbiddenError(MOVIE_OWNER_ERROR_MESSAGE);
+      }
+      return ModelMovie.findByIdAndDelete(movieId)
+        .then((deletedMovie) => {
+          res.send(deletedMovie);
+        });
+    })
+    .catch(next);
 };
 
-module.exports = {
-  getMovies, createMovie, deleteMovie,
-};
+module.exports = { getMovies, addMovieFavorite, deleteMovieFavorite };

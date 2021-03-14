@@ -1,93 +1,90 @@
-const bcrypt = require('bcryptjs');
-const User = require('../models/user');
-const Unautorized = require('../errors/unauthorized');
-const ConflictingRequest = require('../errors/conflicting-request');
-const NotFoundError = require('../errors/not-found-err');
-const jwtSign = require('../utils/jwt-sign');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const UserModel = require('../models/user');
+const { NotFoundError } = require('../errors/not-found');
+const { BadRequestError } = require('../errors/bad-request');
+const { ConflictError } = require('../errors/conflict');
 const {
-  BAD_REQUEST_ERROR_CODE,
-  LOGIN_FAIL_MESSAGE,
-  REPEATED_EMAIL_ERROR_MESSAGE,
-  INCORRECT_ID_MESSAGE,
-  CAST_ERROR,
-} = require('../utils/utils');
+  SECRET_STR, INCORRECT_ERROR_MESSAGE, USER_NOTFOUND_MESSAGE, USER_CONFLICT_ERROR_MESSAGE,
+} = require('../config');
 
-const getCurrentUser = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user.id);
-    const { email, name } = user;
-    if (!user) {
-      throw new NotFoundError(INCORRECT_ID_MESSAGE('пользователя'));
-    }
-    res.send({ email, name });
-  } catch (err) {
-    if (err.name === CAST_ERROR) {
-      err.statusCode = BAD_REQUEST_ERROR_CODE;
-    }
-    next(err);
-  }
-};
-
-const createUser = (req, res, next) => {
-  const { email, password, name } = req.body;
-
-  User.findOne({ email })
+const getUser = (req, res, next) => {
+  UserModel.findById(req.user._id)
+    .orFail(() => new NotFoundError(USER_NOTFOUND_MESSAGE))
     .then((user) => {
-      if (user) {
-        throw new ConflictingRequest(REPEATED_EMAIL_ERROR_MESSAGE);
-      }
-      return bcrypt.hash(password, 10);
-    })
-    .then((hash) => {
-      User.create({ email, password: hash, name })
-        .then(() => {
-          res.send({ email, name });
-        });
+      res.send({ data: user });
     })
     .catch(next);
 };
 
-const updateProfile = (req, res, next) => {
-  User.findByIdAndUpdate(
-    req.user.id,
-    {
-      name: req.body.name,
-      email: req.body.email,
-    },
-    {
-      new: true, // обработчик then получит на вход обновлённую запись
-      runValidators: true, // данные будут валидированы перед изменением
-    },
-  )
+const createUser = (req, res, next) => {
+  const { email, password, name } = req.body;
+  UserModel.findOne({ email })
     .then((user) => {
-      if (!user) {
-        throw new NotFoundError('Произошла ошибка, не удалось найти пользователей');
+      if (user) {
+        throw new ConflictError(USER_CONFLICT_ERROR_MESSAGE);
       }
-      res.status(200).send({ data: user });
+      return bcrypt.hash(password, 10);
     })
-    .catch((err) => next(err));
+    .then((hash) => UserModel.create({
+      email, password: hash, name,
+    }))
+    .then((user) => {
+      res.status(201).send({
+        data: {
+          email: user.email,
+          name: user.name,
+        },
+      });
+    })
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        throw new BadRequestError(INCORRECT_ERROR_MESSAGE);
+      }
+      throw err;
+    })
+    .catch(next);
+};
+
+const updateUser = (req, res, next) => {
+  const { name, email } = req.body;
+  UserModel.findByIdAndUpdate(req.user._id, { name, email }, { runValidators: true, new: true })
+    .orFail(() => new NotFoundError(USER_NOTFOUND_MESSAGE))
+    .then((user) => {
+      res.send({
+        data: {
+          email: user.email,
+          name: user.name,
+        },
+      });
+    })
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        throw new BadRequestError(INCORRECT_ERROR_MESSAGE);
+      }
+      throw err;
+    })
+    .catch(next);
 };
 
 const login = (req, res, next) => {
   const { email, password } = req.body;
-
-  return User.findOne({ email }).select('+password')
+  UserModel.findUserByCredentials(email, password)
     .then((user) => {
       if (!user) {
-        throw new Unautorized(LOGIN_FAIL_MESSAGE);
+        next(new NotFoundError(USER_NOTFOUND_MESSAGE));
+        return;
       }
-      return bcrypt.compare(password, user.password)
-        .then((matched) => {
-          if (!matched) {
-            throw new Unautorized(LOGIN_FAIL_MESSAGE);
-          }
-          const token = jwtSign(user._id);
-          res.send({ token });
-        });
+      const token = jwt.sign(
+        { _id: user._id },
+        SECRET_STR,
+        { expiresIn: '7d' },
+      );
+      res.send({ token });
     })
     .catch(next);
 };
 
 module.exports = {
-  createUser, login, getCurrentUser, updateProfile,
+  getUser, createUser, updateUser, login,
 };
