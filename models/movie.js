@@ -1,64 +1,77 @@
 const mongoose = require('mongoose');
-const validator = require('validator'); // модуль для валидации
+const { isURL } = require('validator');
 
 const movieSchema = new mongoose.Schema({
-  country: { // страна создания фильма
+  country: {
     type: String,
     required: true,
   },
-  director: { // режиссёр фильма
+  director: {
     type: String,
     required: true,
   },
-  duration: { // длительность фильма
+  duration: {
     type: Number,
     required: true,
   },
-  year: { //  год выпуска фильма
+  year: {
     type: String,
     required: true,
   },
-  description: { // описание фильма
+  description: {
     type: String,
     required: true,
   },
-  trailer: { // ссылка на трейлер фильма
-    type: String,
-    required: true,
-    validate: {
-      validator: (urlToImage) => validator.isURL(urlToImage),
-      message: (props) => `${props.value} некорректная ссылка на трейлер фильма`,
-    },
-  },
-  image: { // ссылка на постер к фильму
+  image: {
     type: String,
     required: true,
     validate: {
-      validator: (urlToImage) => validator.isURL(urlToImage),
-      message: (props) => `${props.value} некорректная ссылка на постер к фильму`,
+      validator(value) {
+        return isURL(value);
+      },
+      message: 'Укажиже корректный адрес ссылки',
     },
   },
-  thumbnail: { // миниатюрное изображение постера к фильму
+  thumbnail: {
     type: String,
     required: true,
     validate: {
-      validator: (urlToImage) => validator.isURL(urlToImage),
-      message: (props) => `${props.value} некорректная ссылка на изображение постера`,
+      validator(value) {
+        return isURL(value);
+      },
+      message: 'Укажиже корректный адрес ссылки',
     },
   },
-  owner: { // _id пользователя, который сохранил статью
-    type: mongoose.Schema.Types.ObjectId, // сюда запишется ссылка на создателя карточки
+  trailer: {
+    type: String,
     required: true,
+    validate: {
+      validator(value) {
+        return isURL(value);
+      },
+      message: 'Укажиже корректный адрес ссылки',
+    },
+  },
+  owner: {
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'user',
+    required: true,
   },
-  nameRU: { // название фильма на русском
+  movieId: {
+    type: Number,
+    required: true,
+  },
+  nameRU: {
     type: String,
     required: true,
   },
-  nameEN: { // название фильма на английском
+  nameEN: {
     type: String,
     required: true,
   },
+},
+{
+  versionKey: false,
 });
 
 module.exports = mongoose.model('movie', movieSchema);
