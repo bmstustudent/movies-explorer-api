@@ -1,63 +1,64 @@
 const mongoose = require('mongoose');
-const isURL = require('validator/lib/isURL');
+const validator = require('validator'); // модуль для валидации
 
-const { Schema } = mongoose;
-
-const MovieSchema = new Schema({
-  country: {
+const movieSchema = new mongoose.Schema({
+  country: { // страна создания фильма
     type: String,
-    require: [true, 'country: это обязательное поле'],
+    required: true,
   },
-  director: {
+  director: { // режиссёр фильма
     type: String,
-    require: [true, 'director: это обязательное поле'],
+    required: true,
   },
-  duration: {
+  duration: { // длительность фильма
     type: Number,
-    require: [true, 'duration: это обязательное поле'],
+    required: true,
   },
-  year: {
+  year: { //  год выпуска фильма
     type: String,
-    require: [true, 'year: это обязательное поле'],
+    required: true,
   },
-  description: {
+  description: { // описание фильма
     type: String,
-    require: [true, 'description: это обязательное поле'],
+    required: true,
   },
-  image: {
+  trailer: { // ссылка на трейлер фильма
     type: String,
-    require: [true, 'image: это обязательное поле'],
-    validator: [isURL, 'image: поле на является ссылкой'],
+    required: true,
+    validate: {
+      validator: (urlToImage) => validator.isURL(urlToImage),
+      message: (props) => `${props.value} некорректная ссылка на трейлер фильма`,
+    },
   },
-  trailer: {
+  image: { // ссылка на постер к фильму
     type: String,
-    require: [true, 'trailer: это обязательное поле'],
-    validator: [isURL, 'trailer: поле не является ссылкой'],
+    required: true,
+    validate: {
+      validator: (urlToImage) => validator.isURL(urlToImage),
+      message: (props) => `${props.value} некорректная ссылка на постер к фильму`,
+    },
   },
-  thumbnail: {
+  thumbnail: { // миниатюрное изображение постера к фильму
     type: String,
-    require: [true, 'thumbnail: это обязательное поле'],
-    validator: [isURL, 'thumbnail: поле не является ссылкой'],
+    required: true,
+    validate: {
+      validator: (urlToImage) => validator.isURL(urlToImage),
+      message: (props) => `${props.value} некорректная ссылка на изображение постера`,
+    },
   },
-  owner: {
-    type: mongoose.Schema.Types.ObjectId,
-    require: true,
+  owner: { // _id пользователя, который сохранил статью
+    type: mongoose.Schema.Types.ObjectId, // сюда запишется ссылка на создателя карточки
+    required: true,
     ref: 'user',
-    select: false,
   },
-  nameRU: {
+  nameRU: { // название фильма на русском
     type: String,
-    require: [true, 'nameRU: это обязательное поле'],
+    required: true,
   },
-  nameEN: {
+  nameEN: { // название фильма на английском
     type: String,
-    require: [true, 'nameEN: это обязательное поле'],
-  },
-  movieId: {
-    type: Number,
-    require: [true, 'movieID: это обязательное поле'],
+    required: true,
   },
 });
 
-const MovieModel = mongoose.model('movie', MovieSchema);
-module.exports = MovieModel;
+module.exports = mongoose.model('movie', movieSchema);

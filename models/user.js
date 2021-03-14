@@ -1,48 +1,33 @@
-const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
-const isEmail = require('validator/lib/isEmail');
-const { UnauthorizedError } = require('../errors/unauthorized');
-const { AUTH_INCORRECT_ERROR_MESSAGE } = require('../config');
+const validator = require('validator');
+const {
+  REQUIRED_MESSAGE,
+  VALIDATION_MESSAGE,
+  INCORRECT_LENGTH_MESSAGE,
+  REPEATED_EMAIL_ERROR_MESSAGE,
+} = require('../utils/utils');
 
-const { Schema } = mongoose;
-
-const userSchema = new Schema({
+const userSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, REQUIRED_MESSAGE('name')],
+    minlength: [2, INCORRECT_LENGTH_MESSAGE('Минимальная', 'name', '2')],
+    maxlength: [30, INCORRECT_LENGTH_MESSAGE('Максимальная', 'name', '30')],
+  },
   email: {
     type: String,
-    required: [true, 'email: это обязательное поле'],
-    unique: true,
-    validate: [isEmail, 'email: адрес не является валидным'],
+    required: [true, REQUIRED_MESSAGE('email')],
+    unique: [true, REPEATED_EMAIL_ERROR_MESSAGE],
+    validate: {
+      validator: (v) => validator.isEmail(v),
+      message: VALIDATION_MESSAGE('email', 'email'),
+    },
   },
   password: {
     type: String,
-    required: [true, 'password: это обязательное поле'],
+    required: [true, REQUIRED_MESSAGE('password')],
     select: false,
-  },
-  name: {
-    type: String,
-    minlength: [2, 'name: минимальная длина поля 2 символа'],
-    maxlength: [30, 'name: максимальная длина поля 30 символов'],
-    required: [true, 'name: это обязательное поле'],
   },
 });
 
-function findUserByCredentials(email, password) {
-  return this.findOne({ email }).select('+password')
-    .then((user) => {
-      if (!user) {
-        throw new UnauthorizedError(AUTH_INCORRECT_ERROR_MESSAGE);
-      }
-      return bcrypt.compare(password, user.password)
-        .then((matched) => {
-          if (!matched) {
-            throw new UnauthorizedError(AUTH_INCORRECT_ERROR_MESSAGE);
-          }
-          return user;
-        });
-    });
-}
-
-userSchema.statics.findUserByCredentials = findUserByCredentials;
-
-const UserModel = mongoose.model('user', userSchema);
-module.exports = UserModel;
+module.exports = mongoose.model('user', userSchema);
