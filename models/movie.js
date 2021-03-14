@@ -1,77 +1,64 @@
 const mongoose = require('mongoose');
-const { isURL } = require('validator');
+const validator = require('validator'); // модуль для валидации
 
 const movieSchema = new mongoose.Schema({
-  country: {
+  country: { // страна создания фильма
     type: String,
     required: true,
   },
-  director: {
+  director: { // режиссёр фильма
     type: String,
     required: true,
   },
-  duration: {
+  duration: { // длительность фильма
     type: Number,
     required: true,
   },
-  year: {
+  year: { //  год выпуска фильма
     type: String,
     required: true,
   },
-  description: {
+  description: { // описание фильма
     type: String,
     required: true,
   },
-  image: {
-    type: String,
-    required: true,
-    validate: {
-      validator(value) {
-        return isURL(value);
-      },
-      message: 'Укажиже корректный адрес ссылки',
-    },
-  },
-  thumbnail: {
+  trailer: { // ссылка на трейлер фильма
     type: String,
     required: true,
     validate: {
-      validator(value) {
-        return isURL(value);
-      },
-      message: 'Укажиже корректный адрес ссылки',
+      validator: (urlToImage) => validator.isURL(urlToImage),
+      message: (props) => `${props.value} некорректная ссылка на трейлер фильма`,
     },
   },
-  trailer: {
+  image: { // ссылка на постер к фильму
     type: String,
     required: true,
     validate: {
-      validator(value) {
-        return isURL(value);
-      },
-      message: 'Укажиже корректный адрес ссылки',
+      validator: (urlToImage) => validator.isURL(urlToImage),
+      message: (props) => `${props.value} некорректная ссылка на постер к фильму`,
     },
   },
-  owner: {
-    type: mongoose.Schema.Types.ObjectId,
+  thumbnail: { // миниатюрное изображение постера к фильму
+    type: String,
+    required: true,
+    validate: {
+      validator: (urlToImage) => validator.isURL(urlToImage),
+      message: (props) => `${props.value} некорректная ссылка на изображение постера`,
+    },
+  },
+  owner: { // _id пользователя, который сохранил статью
+    type: mongoose.Schema.Types.ObjectId, // сюда запишется ссылка на создателя карточки
+    required: true,
     ref: 'user',
-    required: true,
   },
-  movieId: {
-    type: Number,
-    required: true,
-  },
-  nameRU: {
+  nameRU: { // название фильма на русском
     type: String,
     required: true,
   },
-  nameEN: {
+  nameEN: { // название фильма на английском
     type: String,
     required: true,
   },
-},
-{
-  versionKey: false,
 });
 
 module.exports = mongoose.model('movie', movieSchema);
