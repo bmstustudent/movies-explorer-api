@@ -1,15 +1,9 @@
-/* eslint-disable indent */
 const router = require('express').Router();
-const { celebrate, Joi } = require('celebrate');
-const { getCurrentUser, updateProfile } = require('../controllers/users.js');
+const { celebrate } = require('celebrate');
+const { userRule } = require('../rules/user');
+const { getUser, updateUser } = require('../controllers/users');
 
-router.get('/me', getCurrentUser);
-
-router.patch('/me', celebrate({
-    body: Joi.object().keys({
-      name: Joi.string().required().min(2).max(30),
-      email: Joi.string().required().email(),
-    }),
-  }), updateProfile);
+router.get('/me', getUser);
+router.patch('/me', celebrate(userRule), updateUser);
 
 module.exports = router;

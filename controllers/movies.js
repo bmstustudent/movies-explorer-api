@@ -1,86 +1,54 @@
-/* eslint-disable indent */
 const Movie = require('../models/movie');
-const Forbidden = require('../errors/forbidden');
-const NotFoundError = require('../errors/not-found-err');
-const {
-  BAD_REQUEST_ERROR_CODE,
-  FORBIDDEN_MESSAGE,
-  INCORRECT_ID_MESSAGE,
-  CAST_ERROR,
-  VALIDATION_ERROR,
-} = require('../utils/utils');
+const NotFoundError = require('../errors/not-found-error');
+const RequestError = require('../errors/request-error');
+const AccessDeniedError = require('../errors/access-denied-error');
 
-const getMovies = async (req, res, next) => {
-  try {
-    const owner = req.user.id;
-    const movies = await Movie.find({ owner });
-    res.send(movies);
-  } catch (err) {
-    if (err.name === CAST_ERROR) {
-      err.statusCode = BAD_REQUEST_ERROR_CODE;
-    }
-    next(err);
-  }
+module.exports.createMovie = (req, res, next) => {
+  const {
+    movieId,
+    country,
+    director,
+    duration,
+    year,
+    description,
+    image,
+    thumbnail,
+    trailer,
+    nameRU,
+    nameEN,
+  } = req.body;
+  return Movie.create({
+    movieId,
+    country,
+    director,
+    duration,
+    year,
+    description,
+    image,
+    thumbnail,
+    trailer,
+    nameRU,
+    nameEN,
+    owner: req.user._id,
+  })
+    .then((movie) => res.send(movie))
+    .catch((error) => next(error.name === 'ValidationError'
+      ? new RequestError('Укажите корректные данные фильма')
+      : error));
 };
 
-const createMovie = async (req, res, next) => {
-  try {
-    const {
-      country,
-      director,
-      duration,
-      year,
-      description,
-      image,
-      trailer,
-      movieId,
-      nameRU,
-      nameEN,
-      thumbnail,
-    } = req.body;
-    const newMovie = await Movie.create({
-      country,
-      director,
-      duration,
-      year,
-      description,
-      image,
-      trailer,
-      movieId,
-      nameRU,
-      nameEN,
-      thumbnail,
-      owner: req.user.id,
-    });
-    res.send(newMovie);
-  } catch (err) {
-    if (err.name === CAST_ERROR || err.name === VALIDATION_ERROR) {
-      err.statusCode = BAD_REQUEST_ERROR_CODE;
-    }
-    next(err);
-  }
-};
+module.exports.getMovies = (req, res, next) => Movie.find({ owner: req.user._id })
+  .then((movies) => res.send(movies))
+  .catch(() => next(new NotFoundError('Фильмы не найдены')));
 
-const deleteMovie = async (req, res, next) => {
-  try {
-    const currentUser = req.user.id;
-    const { movieId } = req.params;
-    const movieForConfirm = await Movie.findById(movieId).select('+owner');
-    if (movieForConfirm === null) {
-      throw new NotFoundError(INCORRECT_ID_MESSAGE('фильма'));
-    } else if (currentUser !== movieForConfirm.owner.toString()) {
-      throw new Forbidden(FORBIDDEN_MESSAGE);
+module.exports.deleteMovie = (req, res, next) => Movie.findById(req.params.movieId)
+  .orFail()
+  .then((movie) => {
+    if (String(movie.owner) !== String(req.user._id)) {
+      throw new AccessDeniedError('Вы не можете удалить этот фильм');
     }
-    const confirmedMovie = await Movie.findByIdAndRemove(movieId);
-    res.send(confirmedMovie);
-  } catch (err) {
-    if (err.name === CAST_ERROR) {
-      err.statusCode = BAD_REQUEST_ERROR_CODE;
-    }
-    next(err);
-  }
-};
-
-module.exports = {
-  getMovies, createMovie, deleteMovie,
-};
+    return movie.remove().then(() => res.send(movie));
+  })
+  .catch((error) => next(error.statusCode
+    ? error
+    : new NotFoundError('Фильм не найден')));
